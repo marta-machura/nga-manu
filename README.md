@@ -36,6 +36,8 @@ Set these as environment variables or in a `.env` file (which git ignores):
 
 ## Deployment
 
+Live site: https://d1i8sobfjs2rkj.cloudfront.net
+
 GitHub Actions ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) runs on every push and pull request:
 
 1. **Build:** install, type-check and build the site.

@@ -6,8 +6,11 @@ Description: >
 Parameters:
   GitHubRepo:
     Type: String
-    Default: marta-machura/nga-manu
-    Description: owner/repo allowed to deploy
+    # GitHub's OIDC tokens use immutable IDs (owner@id/repo@id), so a deleted and
+    # recreated repo with the same name can't deploy. Find yours with:
+    #   gh api repos/OWNER/REPO/actions/oidc/customization/sub
+    Default: marta-machura@63081593/nga-manu@1433798649
+    Description: owner@id/repo@id allowed to deploy, as it appears in the OIDC sub claim
   CreateGitHubOidcProvider:
     Type: String
     AllowedValues: ["true", "false"]
