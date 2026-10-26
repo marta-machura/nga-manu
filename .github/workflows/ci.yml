@@ -4,6 +4,10 @@ on:
   push:
     branches: [main]
   pull_request:
+  # Rebuild nightly so the site picks up changes to Te Papa's collection data
+  schedule:
+    - cron: "0 14 * * *" # 14:00 UTC = 3am in New Zealand (NZDT)
+  workflow_dispatch: # adds a "Run workflow" button on GitHub
 
 jobs:
   build:
@@ -24,3 +28,49 @@ jobs:
 
       - name: Build
         run: npm run build
+        env:
+          TEPAPA_API_KEY: ${{ secrets.TEPAPA_API_KEY }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: site
+          path: dist
+
+  lint-infra:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - run: pipx run cfn-lint infra/site.yml
+
+  deploy:
+    needs: build
+    # Only deploy from main, never from pull requests, and only once AWS is set up
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && vars.AWS_ROLE_ARN != ''
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write # lets the job request an OIDC token to exchange for AWS credentials
+      contents: read
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: site
+          path: dist
+
+      - uses: aws-actions/configure-aws-credentials@v5
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      # Hashed assets in _astro/ never change, so browsers can cache them forever.
+      # Pages must always be checked for updates.
+      - name: Upload to S3
+        run: |
+          if [ -d dist/_astro ]; then
+            aws s3 sync dist/_astro "s3://${{ vars.S3_BUCKET }}/_astro" --delete \
+              --cache-control "public,max-age=31536000,immutable"
+          fi
+          aws s3 sync dist "s3://${{ vars.S3_BUCKET }}" --delete --exclude "_astro/*" \
+            --cache-control "public,max-age=0,must-revalidate"
+
+      - name: Clear CloudFront cache
+        run: aws cloudfront create-invalidation --distribution-id "${{ vars.CLOUDFRONT_DISTRIBUTION_ID }}" --paths "/*"

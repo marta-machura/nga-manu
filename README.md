@@ -34,6 +34,32 @@ Set these as environment variables or in a `.env` file (which git ignores):
 | `TEPAPA_API_KEY` | none | A registered API key. Without one, the build uses the API's one-hour guest token. |
 | `BIRD_LIMIT` | `60` | Number of species to include. Must be a positive whole number. |
 
+## Deployment
+
+GitHub Actions ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) runs on every push and pull request:
+
+1. **Build:** install, type-check and build the site.
+2. **Lint infrastructure:** check the CloudFormation template with `cfn-lint`.
+3. **Deploy** (on `main` only): upload to S3 and clear the CloudFront cache.
+
+It also rebuilds nightly so the site picks up changes to the collection data.
+
+### Infrastructure
+
+[`infra/site.yml`](infra/site.yml) is a CloudFormation template defining:
+
+- A **private S3 bucket**. Only CloudFront can read it, through Origin Access Control.
+- A **CloudFront distribution** for HTTPS and caching. A small CloudFront Function maps folder URLs like `/manu/123/` to `index.html`.
+- An **IAM role for GitHub Actions**, assumed through OIDC. The workflow gets short-lived credentials, so no AWS keys are stored in GitHub, and only the `main` branch of this repo can deploy.
+
+To create or update the stack:
+
+```sh
+aws cloudformation deploy --stack-name nga-manu --template-file infra/site.yml --capabilities CAPABILITY_IAM
+```
+
+Then set the stack outputs as repository variables: `AWS_ROLE_ARN`, `AWS_REGION`, `S3_BUCKET` and `CLOUDFRONT_DISTRIBUTION_ID`.
+
 ## Licence
 
 Code: MIT. Collection data and images belong to Te Papa and are used under the licence shown on each image (for example, CC BY 4.0).
