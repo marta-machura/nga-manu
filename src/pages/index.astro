@@ -1,0 +1,82 @@
+---
+import Base from "../layouts/Base.astro";
+import { getBirds } from "../lib/tepapa";
+
+const birds = await getBirds();
+---
+
+<Base title="Ngā Manu · Birds of Aotearoa">
+  <h1><span lang="mi">Ngā Manu</span> · Birds of Aotearoa</h1>
+  <p class="intro">
+    {birds.length} bird species from Te Papa's natural history collection, listed by their
+    te reo Māori names.
+  </p>
+
+  <ul class="grid">
+    {
+      birds.map((bird) => (
+        <li class="card">
+          <a href={`/manu/${bird.id}/`}>
+            <img
+              src={bird.image.thumb}
+              alt={`Museum specimen of ${bird.commonName ?? bird.maoriName}`}
+              loading="lazy"
+              width="200"
+              height="200"
+            />
+            <span class="name" lang="mi">{bird.maoriName}</span>
+          </a>
+          {bird.commonName && <span class="common">{bird.commonName}</span>}
+          <i class="scientific">{bird.scientificName}</i>
+        </li>
+      ))
+    }
+  </ul>
+</Base>
+
+<style>
+  .intro {
+    color: var(--muted);
+  }
+
+  .grid {
+    list-style: none;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
+    gap: 1rem;
+  }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 0.5rem;
+    padding: 0.75rem;
+  }
+
+  .card a {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    text-decoration: none;
+  }
+
+  .card img {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 1;
+    object-fit: cover;
+    border-radius: 0.25rem;
+  }
+
+  .name {
+    font-weight: 600;
+  }
+
+  .common,
+  .scientific {
+    display: block;
+    color: var(--muted);
+    font-size: 0.875rem;
+  }
+</style>

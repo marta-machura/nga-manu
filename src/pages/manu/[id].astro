@@ -1,0 +1,89 @@
+---
+import Base from "../../layouts/Base.astro";
+import { getBirds, type Bird } from "../../lib/tepapa";
+
+export async function getStaticPaths() {
+  const birds = await getBirds();
+  return birds.map((bird) => ({ params: { id: String(bird.id) }, props: { bird } }));
+}
+
+const { bird } = Astro.props as { bird: Bird };
+---
+
+<Base title={`${bird.maoriName} · Ngā Manu`}>
+  <p><a href="/">← All birds</a></p>
+
+  <article>
+    <h1 lang="mi">{bird.maoriName}</h1>
+
+    <figure>
+      <img
+        src={bird.image.preview}
+        alt={`Museum specimen of ${bird.commonName ?? bird.maoriName}`}
+        width={bird.image.width}
+        height={bird.image.height}
+      />
+      <figcaption>
+        {bird.creditLine && <>{bird.creditLine}. </>}
+        Image: Te Papa, <a href={bird.image.licenceUrl}>{bird.image.licence}</a>.
+      </figcaption>
+    </figure>
+
+    <dl>
+      <dt>Te reo Māori</dt>
+      <dd lang="mi">{bird.maoriName}</dd>
+      {
+        bird.commonName && (
+          <>
+            <dt>Common name</dt>
+            <dd>{bird.commonName}</dd>
+          </>
+        )
+      }
+      <dt>Scientific name</dt>
+      <dd><i>{bird.scientificName}</i></dd>
+      {
+        bird.family && (
+          <>
+            <dt>Family</dt>
+            <dd>{bird.family}</dd>
+          </>
+        )
+      }
+    </dl>
+
+    <p><a href={bird.collectionsOnlineUrl}>View this specimen on Collections Online</a></p>
+  </article>
+</Base>
+
+<style>
+  figure {
+    margin: 0;
+    max-width: 32rem;
+  }
+
+  figure img {
+    width: 100%;
+    height: auto;
+    border-radius: 0.5rem;
+  }
+
+  figcaption {
+    color: var(--muted);
+    font-size: 0.875rem;
+  }
+
+  dl {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    gap: 0.25rem 1rem;
+  }
+
+  dt {
+    font-weight: 600;
+  }
+
+  dd {
+    margin: 0;
+  }
+</style>
