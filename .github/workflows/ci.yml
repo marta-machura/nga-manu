@@ -61,16 +61,26 @@ jobs:
           role-to-assume: ${{ vars.AWS_ROLE_ARN }}
           aws-region: ${{ vars.AWS_REGION }}
 
+      # Upload in an order that never leaves the live site pointing at missing files:
+      # new hashed assets first (old ones stay for now), then the pages that use them.
       # Hashed assets in _astro/ never change, so browsers can cache them forever.
       # Pages must always be checked for updates.
       - name: Upload to S3
         run: |
           if [ -d dist/_astro ]; then
-            aws s3 sync dist/_astro "s3://${{ vars.S3_BUCKET }}/_astro" --delete \
+            aws s3 sync dist/_astro "s3://${{ vars.S3_BUCKET }}/_astro" \
               --cache-control "public,max-age=31536000,immutable"
           fi
           aws s3 sync dist "s3://${{ vars.S3_BUCKET }}" --delete --exclude "_astro/*" \
             --cache-control "public,max-age=0,must-revalidate"
 
       - name: Clear CloudFront cache
-        run: aws cloudfront create-invalidation --distribution-id "${{ vars.CLOUDFRONT_DISTRIBUTION_ID }}" --paths "/*"
+        run:
+          aws cloudfront create-invalidation --distribution-id "${{ vars.CLOUDFRONT_DISTRIBUTION_ID }}" --paths "/*"
+
+          # Only now, once no page points at them, remove old hashed assets
+      - name: Remove old assets
+        run: |
+          if [ -d dist/_astro ]; then
+            aws s3 sync dist/_astro "s3://${{ vars.S3_BUCKET }}/_astro" --delete \
+              --cache-control "public,max-age=31536000,immutable"
